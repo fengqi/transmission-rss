@@ -109,8 +109,8 @@ class Transmission
         $context = stream_context_create(array(
             'http' => array(
                 'header' => "Content-Type: application/json\r\n".
-                    "Authorization: Basic ".base64_encode(sprintf("%s:%s", $this->user, $this->password))."\r\n".
-                    'X-Transmission-Session-Id: '.$this->session_id,
+                            "Authorization: Basic ".base64_encode(sprintf("%s:%s", $this->user, $this->password))."\r\n".
+                            'X-Transmission-Session-Id: '.$this->session_id,
                 'method' => 'POST',
                 'content' => json_encode($data),
             ),
