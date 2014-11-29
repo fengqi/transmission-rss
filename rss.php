@@ -35,6 +35,7 @@ class Transmission
      * 添加种子, 如果是种子的原始二进制, 需要先进行 base64 编码
      *
      * @param $url
+     * @param bool $isEncode
      * @param array $options
      * @return mixed
      */
