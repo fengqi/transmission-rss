@@ -63,16 +63,11 @@ class Transmission
      */
     public function getSessionId()
     {
-        $data = array(
-            'method' => 'session-get',
-        );
-
         $ch = curl_init($this->server);
         curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
         curl_setopt($ch, CURLOPT_USERPWD, $this->user.':'.$this->password);
         curl_setopt($ch, CURLOPT_HEADER, true);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         $content = curl_exec($ch);
         curl_close($ch);
 
@@ -96,7 +91,7 @@ class Transmission
             'arguments' => $arguments
         );
 
-        $header = array(
+        /*$header = array(
             'X-Transmission-Session-Id: '.$this->session_id,
         );
 
@@ -109,13 +104,24 @@ class Transmission
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         $content = curl_exec($ch);
-        curl_close($ch);
+        curl_close($ch);*/
+
+        $context = stream_context_create(array(
+            'http' => array(
+                'header' => "Content-Type: application/json\r\n".
+                    "Authorization: Basic ".base64_encode(sprintf("%s:%s", $this->user, $this->password))."\r\n".
+                    'X-Transmission-Session-Id: '.$this->session_id,
+                'method' => 'POST',
+                'content' => json_encode($data),
+            ),
+        ));
+        $content = file_get_contents($this->server, null, $context);
 
         return $content;
     }
 
     /**
-     * 获取 chd, cmct, ttg 等的 rss 列表
+     * 获取 rss 的种子列表
      *
      * @param $rss
      * @return array
