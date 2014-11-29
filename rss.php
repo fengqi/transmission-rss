@@ -3,7 +3,7 @@
  * Transmission simple RPC/0.1
  *
  * @author  fengqi <lyf362345@gmail.com>
- * @version $Id: $
+ * @link    https://github.com/fengqi/transmission-rss
  */
 class Transmission
 {
@@ -32,17 +32,16 @@ class Transmission
     }
 
     /**
-     * 添加种子, 默认是发送种子的原始二进制
-     * todo 后期扩展成可添加远程种子, 本地文件
+     * 添加种子, 如果是种子的原始二进制, 需要先进行 base64 编码
      *
      * @param $url
      * @param array $options
      * @return mixed
      */
-    public function add($url, $options = array())
+    public function add($url, $isEncode = false, $options = array())
     {
         return $this->request('torrent-add', array_merge($options, array(
-            'metainfo' => is_file($url) ? base64_encode(file_get_contents($url)) : $url,
+            $isEncode ? 'metainfo' : 'filename' => $url,
         )));
     }
 
@@ -63,16 +62,21 @@ class Transmission
      */
     public function getSessionId()
     {
-        $ch = curl_init($this->server);
-        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($ch, CURLOPT_USERPWD, $this->user.':'.$this->password);
-        curl_setopt($ch, CURLOPT_HEADER, true);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $content = curl_exec($ch);
-        curl_close($ch);
+        $context = stream_context_create(array(
+            'http' => array(
+                'header' =>"Authorization: Basic ".base64_encode(sprintf("%s:%s", $this->user, $this->password)),
+                'method' => 'GET',
+                'timeout' => 5,
+                'ignore_errors' => true
+            ),
+        ));
+        file_get_contents($this->server, null, $context);
 
-        preg_match("/X-Transmission-Session-Id: (.*)/", $content, $content);
-        $this->session_id = $content[1];
+        foreach ($http_response_header as $header) {
+            if (is_int(stripos($header, 'X-Transmission-Session-Id'))) {
+                $this->session_id = $header; break;
+            }
+        }
 
         return $this->session_id;
     }
@@ -91,33 +95,19 @@ class Transmission
             'arguments' => $arguments
         );
 
-        /*$header = array(
-            'X-Transmission-Session-Id: '.$this->session_id,
-        );
-
-        $ch = curl_init($this->server);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($ch, CURLOPT_USERPWD, $this->user . ':' . $this->password);
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        $content = curl_exec($ch);
-        curl_close($ch);*/
-
         $context = stream_context_create(array(
             'http' => array(
                 'header' => "Content-Type: application/json\r\n".
                             "Authorization: Basic ".base64_encode(sprintf("%s:%s", $this->user, $this->password))."\r\n".
-                            'X-Transmission-Session-Id: '.$this->session_id,
+                            $this->session_id,
                 'method' => 'POST',
                 'content' => json_encode($data),
+                'timeout' => 5,
+                'ignore_errors' => true
             ),
         ));
-        $content = file_get_contents($this->server, null, $context);
 
-        return $content;
+        return file_get_contents($this->server, null, $context);
     }
 
     /**
@@ -126,11 +116,8 @@ class Transmission
      * @param $rss
      * @return array
      */
-    function getRssItems($rss, $tempDir = '/tmp/rss')
+    function getRssItems($rss)
     {
-        $torrents = glob($tempDir.'/*.torrent');
-        if (!empty($torrents)) return $torrents;
-
         $rss = file_get_contents($rss);
         $xml = new DOMDocument();
         $xml->loadXML($rss);
@@ -138,15 +125,10 @@ class Transmission
 
         $items = array();
         foreach ($elements as $item) {
-            $title = $item->getElementsByTagName('title')->item(0)->nodeValue;
-            $link = $item->getElementsByTagName('enclosure')->item(0)->getAttribute('url');
-
-            $data = file_get_contents($link);
-            !file_exists($tempDir) && mkdir($tempDir);
-            $file = sprintf("%s/%s.torrent", $tempDir, $title);
-            file_put_contents($file, $data);
-
-            $items[] = $file;
+            $items[] = array(
+                'title' => $item->getElementsByTagName('title')->item(0)->nodeValue,
+                'link' => $item->getElementsByTagName('enclosure')->item(0)->getAttribute('url')
+            );
         }
 
         return $items;
@@ -156,21 +138,18 @@ class Transmission
 // 配置
 $rssLink = 'http://chdbits.org/torrentrss.php?myrss=1&linktype=dl&uid=111&passkey=111';
 $server = 'http://127.0.0.1';
-$port = '9091';
+$port = 9091;
 $rpcPath = '/transmission/rpc';
 $user = '';
 $password = '';
-$tempDir = '/tmp/rss';
 
 // 获取 rss 种子, 执行添加
 $trans = new Transmission($server, $port, $rpcPath, $user, $password);
-$torrents = $trans->getRssItems($rssLink, $tempDir);
+$torrents = $trans->getRssItems($rssLink);
 foreach ($torrents as $torrent) {
-    $response = $trans->add($torrent);
-    $response = json_decode($response);
+    $response = json_decode($trans->add($torrent['link']));
     if ($response->result == 'success') {
-        printf("success add torrent: %s\n", $torrent);
-        unlink($torrent);
+        printf("success add torrent: %s\n", $torrent['title']);
     }
 }
 
