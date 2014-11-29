@@ -6,7 +6,7 @@
 
 
 # todo:
-* 同时支持多个其他 pt 的 rss
+* 同时支持多个其他 PT 的 RSS
 * 增加本地/远程服务器判断
 * 记录日志
-* 完善 Transmission class, 可单独抽出成 Transmission Webui使用
+* 完善 Transmission class, 可单独抽出成 Transmission Webui 使用
