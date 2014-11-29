@@ -145,6 +145,7 @@ class Transmission
     }
 }
 
+// 配置
 $rssLink = 'http://chdbits.org/torrentrss.php?myrss=1&linktype=dl&uid=111&passkey=111';
 $server = 'http://127.0.0.1';
 $port = '9091';
@@ -154,7 +155,6 @@ $password = '';
 $tempDir = '/tmp/rss';
 
 $trans = new Transmission($server, $port, $rpcPath, $user, $password);
-
 
 // 获取 rss 种子
 $torrents = glob($tempDir.'/*.torrent');
