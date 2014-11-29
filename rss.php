@@ -32,17 +32,17 @@ class Transmission
     }
 
     /**
-     * 添加种子, 也可添加种子的二进制文件, 但是 isEncoded 需要设置为 true
+     * 添加种子, 默认是发送种子的原始二进制
+     * todo 后期扩展成可添加远程种子, 本地文件
      *
      * @param $url
-     * @param bool $isEncoded
      * @param array $options
      * @return mixed
      */
     public function add($url, $options = array())
     {
         return $this->request('torrent-add', array_merge($options, array(
-            'metainfo' => is_file($url) ? file_get_contents(base64_encode($url)) : $url,
+            'metainfo' => is_file($url) ? base64_encode(file_get_contents($url)) : $url,
         )));
     }
 
@@ -122,6 +122,9 @@ class Transmission
      */
     function getRssItems($rss, $tempDir = '/tmp/rss')
     {
+        $torrents = glob($tempDir.'/*.torrent');
+        if (!empty($torrents)) return $torrents;
+
         $rss = file_get_contents($rss);
         $xml = new DOMDocument();
         $xml->loadXML($rss);
@@ -140,7 +143,6 @@ class Transmission
             $items[] = $file;
         }
 
-        unset($title, $link, $rss, $xml, $elements, $data, $file);
         return $items;
     }
 }
@@ -154,15 +156,9 @@ $user = '';
 $password = '';
 $tempDir = '/tmp/rss';
 
+// 获取 rss 种子, 执行添加
 $trans = new Transmission($server, $port, $rpcPath, $user, $password);
-
-// 获取 rss 种子
-$torrents = glob($tempDir.'/*.torrent');
-if (empty($torrents)) {
-    $torrents = $trans->getRssItems($rssLink, $tempDir);
-}
-
-// 执行添加
+$torrents = $trans->getRssItems($rssLink, $tempDir);
 foreach ($torrents as $torrent) {
     $response = $trans->add($torrent);
     $response = json_decode($response);
@@ -171,3 +167,4 @@ foreach ($torrents as $torrent) {
         unlink($torrent);
     }
 }
+
