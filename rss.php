@@ -10,7 +10,7 @@ class Transmission
     private $server;
     private $user;
     private $password;
-    protected $session_id;
+    private $session_id;
 
     /**
      * 构造函数, 初始化配置
@@ -25,7 +25,7 @@ class Transmission
      */
     public function __construct($server, $port = '9091', $rpcPath = '/transmission/rpc', $user = '', $password = '')
     {
-        $this->server = $server . ':' . $port . $rpcPath;
+        $this->server = $server.':'.$port.$rpcPath;
         $this->user = $user;
         $this->password = $password;
         $this->session_id = $this->getSessionId();
@@ -63,21 +63,17 @@ class Transmission
      */
     public function getSessionId()
     {
-        $context = stream_context_create(array(
-            'http' => array(
-                'header' =>"Authorization: Basic ".base64_encode(sprintf("%s:%s", $this->user, $this->password)),
-                'method' => 'GET',
-                'timeout' => 5,
-                'ignore_errors' => true
-            ),
-        ));
-        file_get_contents($this->server, null, $context);
-
-        foreach ($http_response_header as $header) {
-            if (is_int(stripos($header, 'X-Transmission-Session-Id'))) {
-                $this->session_id = $header; break;
-            }
-        }
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $this->server);
+        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+        curl_setopt($ch, CURLOPT_USERPWD, $this->user.':'.$this->password);
+        curl_setopt($ch, CURLOPT_HEADER, false);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $content = curl_exec($ch);
+        curl_close($ch);
+        preg_match("/<code>(X-Transmission-Session-Id: .*)<\/code>/", $content, $content);
+        $this->session_id = $content[1];
 
         return $this->session_id;
     }
@@ -96,19 +92,28 @@ class Transmission
             'arguments' => $arguments
         );
 
-        $context = stream_context_create(array(
-            'http' => array(
-                'header' => "Content-Type: application/json\r\n".
-                            "Authorization: Basic ".base64_encode(sprintf("%s:%s", $this->user, $this->password))."\r\n".
-                            $this->session_id,
-                'method' => 'POST',
-                'content' => json_encode($data),
-                'timeout' => 5,
-                'ignore_errors' => true
-            ),
-        ));
+        $header = array(
+            'Content-Type: application/json',
+            'Authorization: Basic '.base64_encode(sprintf("%s:%s", $this->user, $this->password)),
+            $this->session_id
+        );
 
-        return file_get_contents($this->server, null, $context);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $this->server);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+        curl_setopt($ch, CURLOPT_USERPWD, $this->user.':'.$this->password);
+        curl_setopt($ch, CURLOPT_HEADER, false);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $content = curl_exec($ch);
+        curl_close($ch);
+
+        if (!$content)  $content = json_encode(array('result' => 'failed'));
+        return $content;
+
     }
 
     /**
@@ -119,34 +124,55 @@ class Transmission
      */
     function getRssItems($rss)
     {
-        $rss = file_get_contents($rss);
-        $xml = new DOMDocument();
-        $xml->loadXML($rss);
-        $elements = $xml->getElementsByTagName('item');
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_HEADER, false);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 
         $items = array();
-        foreach ($elements as $item) {
-            $items[] = array(
-                'title' => $item->getElementsByTagName('title')->item(0)->nodeValue,
-                'link' => $item->getElementsByTagName('enclosure')->item(0)->getAttribute('url')
-            );
+        foreach ($rss as $link) {
+            curl_setopt($ch, CURLOPT_URL, $link);
+            $content = curl_exec($ch);
+
+            $xml = new DOMDocument();
+            $xml->loadXML($content);
+            $elements = $xml->getElementsByTagName('item');
+
+            foreach ($elements as $item) {
+                $link = $item->getElementsByTagName('enclosure')->item(0) != null ?
+                        $item->getElementsByTagName('enclosure')->item(0)->getAttribute('url') :
+                        $item->getElementsByTagName('link')->item(0)->nodeValue;
+
+                $items[] = array(
+                    'title' => $item->getElementsByTagName('title')->item(0)->nodeValue,
+                    'link' => $link,
+                );
+            }
         }
+        curl_close($ch);
 
         return $items;
     }
 }
 
 // 配置
-$rssLink = 'http://chdbits.org/torrentrss.php?myrss=1&linktype=dl&uid=111&passkey=111';
+$rss = array(
+    'http://chdbits.org/torrentrss.php...',
+    'http://totheglory.im/putrssmc.php...',
+    'https://hdcmct.org/torrentrss.php...',
+    'https://open.cd/torrentrss.php?.....',
+    'https://mv.open.cd/torrentrss.php?..',
+    'http://hdwing.com/rss.php?..........',
+    'http://hdtime.org/torrentrss.php?...'
+);
 $server = 'http://127.0.0.1';
 $port = 9091;
 $rpcPath = '/transmission/rpc';
 $user = '';
 $password = '';
 
-// 获取 rss 种子, 执行添加
 $trans = new Transmission($server, $port, $rpcPath, $user, $password);
-$torrents = $trans->getRssItems($rssLink);
+$torrents = $trans->getRssItems($rss);
 foreach ($torrents as $torrent) {
     $response = json_decode($trans->add($torrent['link']));
     if ($response->result == 'success') {
