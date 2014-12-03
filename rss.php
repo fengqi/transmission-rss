@@ -176,7 +176,7 @@ $torrents = $trans->getRssItems($rss);
 foreach ($torrents as $torrent) {
     $response = json_decode($trans->add($torrent['link']));
     if ($response->result == 'success') {
-        printf("success add torrent: %s\n", $torrent['title']);
+        printf("%s: success add torrent: %s\n", date('Y-m-d H:i:s'), $torrent['title']);
     }
 }
 
