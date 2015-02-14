@@ -135,6 +135,7 @@ class Transmission
         foreach ($rss as $link) {
             curl_setopt($ch, CURLOPT_URL, $link);
             $content = curl_exec($ch);
+            if (!$content) continue;
 
             $xml = new DOMDocument();
             $xml->loadXML($content);
