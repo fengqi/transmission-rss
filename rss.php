@@ -3,6 +3,7 @@
  * Transmission simple RPC/0.1
  *
  * @author  fengqi <lyf362345@gmail.com>
+ * @modiled by : Ankit Nigam @ankit__nigam
  * @link    https://github.com/fengqi/transmission-rss
  */
 class Transmission
