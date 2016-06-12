@@ -173,13 +173,26 @@ $port = 9091;
 $rpcPath = '/transmission/rpc';
 $user = '';
 $password = '';
+$file = '';  // Provide path to the log file. If it is not already there this script will create one. 
 
 $trans = new Transmission($server, $port, $rpcPath, $user, $password);
 $torrents = $trans->getRssItems($rss);
 foreach ($torrents as $torrent) {
-    $response = json_decode($trans->add($torrent['link']));
-    if ($response->result == 'success') {
-        printf("%s: success add torrent: %s\n", date('Y-m-d H:i:s'), $torrent['title']);
+    $exists = 0; // Flag to check if torrnet file title already present in log file. 
+    $search = $torrent['title'];
+    $lines = file($file);    
+    foreach($lines as $line){       // reading each line of the log file
+      if(strpos($line, $search) !== false){     
+      $exists = 1;                  // Found the match hence setting the flag to 1
+      printf("%s: Torrent Already Downloaded / or in queue: %s\n", date('Y-m-d H:i:s'), $torrent['title']);
+      }
+    }
+    if($exists == 0){               // if flag is set to 0 go ahead and add the torrent to transmission queue.
+      $response = json_decode($trans->add($torrent['link']));
+      if ($response->result == 'success') {
+          printf("%s: success add torrent: %s\n", date('Y-m-d H:i:s'), $torrent['title']);
+          $message = $torrent['title'].PHP_EOL;
+          file_put_contents($file, $message, FILE_APPEND | LOCK_EX);
+      }
     }
 }
-
