@@ -1,6 +1,6 @@
-# Transmission-RSS - add support of RSS to Transmission 
+# Transmission-RSS - add support of RSS to Transmission with Pushbullet notification
 ## Description
-* Edit script according to your environment and requirement -  rss, server, port, rpcPath, user, password , Logfilepath
+* Edit script according to your environment and requirement -  rss, server, port, rpcPath, user, password , Logfilepath , pushbulletnotifcation file path.
 * Tested on my Raspberry Pi -  Create a regular cron job to execute it -  `*/10 * * * * php rss.php`
 
 ## Added following functionalites to  fengqi's repo -
