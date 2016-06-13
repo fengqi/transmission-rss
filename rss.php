@@ -160,15 +160,20 @@ class Transmission
 
 // é…ç½®
 $rss = array(
-    'https://showrss.info/user/70349.rss?magnets=true&namespaces=true&name=clean&quality=sd&re=null',
-    'https://kat.cr/bookmarks/rss/personal/c4b9afc5cb0a8b8464ecd32717880e3d/'
+    'http://chdbits.org/torrentrss.php...',
+    'http://totheglory.im/putrssmc.php...',
+    'https://hdcmct.org/torrentrss.php...',
+    'https://open.cd/torrentrss.php?.....',
+    'https://mv.open.cd/torrentrss.php?..',
+    'http://hdwing.com/rss.php?..........',
+    'http://hdtime.org/torrentrss.php?...'
 );
-$server = 'http://192.168.2.15';
+$server = 'http://192.168.2.0';
 $port = 9091;
 $rpcPath = '/transmission/rpc';
 $user = '';
 $password = '';
-$file = '/home/pi/scripts/rsstorrentlog.txt';
+$file = '';
 $pushbullet_script = '';
 $trans = new Transmission($server, $port, $rpcPath, $user, $password);
 $torrents = $trans->getRssItems($rss);
