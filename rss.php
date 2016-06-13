@@ -3,7 +3,6 @@
  * Transmission simple RPC/0.1
  *
  * @author  fengqi <lyf362345@gmail.com>
- * @modiled by : Ankit Nigam @ankit__nigam
  * @link    https://github.com/fengqi/transmission-rss
  */
 class Transmission
@@ -14,7 +13,7 @@ class Transmission
     private $session_id;
 
     /**
-     * 构造函数, 初始化配置
+     * æž„é€ å‡½æ•°, åˆå§‹åŒ–é…ç½®
      *
      * @param $server
      * @param string $port
@@ -33,7 +32,7 @@ class Transmission
     }
 
     /**
-     * 添加种子, 如果是种子的原始二进制, 需要先进行 base64 编码
+     * æ·»åŠ ç§å­, å¦‚æžœæ˜¯ç§å­çš„åŽŸå§‹äºŒè¿›åˆ¶, éœ€è¦å…ˆè¿›è¡Œ base64 ç¼–ç 
      *
      * @param $url
      * @param bool $isEncode
@@ -48,7 +47,7 @@ class Transmission
     }
 
     /**
-     * 获取 Transmission 服务器状态
+     * èŽ·å– Transmission æœåŠ¡å™¨çŠ¶æ€
      *
      * @return mixed
      */
@@ -58,7 +57,7 @@ class Transmission
     }
 
     /**
-     * 获取 Transmission session-id, 每次 rpc 请求都需要带上 session-id
+     * èŽ·å– Transmission session-id, æ¯æ¬¡ rpc è¯·æ±‚éƒ½éœ€è¦å¸¦ä¸Š session-id
      *
      * @return string
      */
@@ -80,10 +79,10 @@ class Transmission
     }
 
     /**
-     * 执行 rpc 请求
+     * æ‰§è¡Œ rpc è¯·æ±‚
      *
-     * @param $method 请求类型/方法, 详见 $this->allowMethods
-     * @param array $arguments 附加参数, 可选
+     * @param $method è¯·æ±‚ç±»åž‹/æ–¹æ³•, è¯¦è§ $this->allowMethods
+     * @param array $arguments é™„åŠ å‚æ•°, å¯é€‰
      * @return mixed
      */
     private function request($method, $arguments = array())
@@ -118,7 +117,7 @@ class Transmission
     }
 
     /**
-     * 获取 rss 的种子列表
+     * èŽ·å– rss çš„ç§å­åˆ—è¡¨
      *
      * @param $rss
      * @return array
@@ -159,41 +158,39 @@ class Transmission
     }
 }
 
-// 配置
+// é…ç½®
 $rss = array(
-    'http://chdbits.org/torrentrss.php...',
-    'http://totheglory.im/putrssmc.php...',
-    'https://hdcmct.org/torrentrss.php...',
-    'https://open.cd/torrentrss.php?.....',
-    'https://mv.open.cd/torrentrss.php?..',
-    'http://hdwing.com/rss.php?..........',
-    'http://hdtime.org/torrentrss.php?...'
+    'https://showrss.info/user/70349.rss?magnets=true&namespaces=true&name=clean&quality=sd&re=null',
+    'https://kat.cr/bookmarks/rss/personal/c4b9afc5cb0a8b8464ecd32717880e3d/'
 );
-$server = 'http://127.0.0.1';
+$server = 'http://192.168.2.15';
 $port = 9091;
 $rpcPath = '/transmission/rpc';
 $user = '';
 $password = '';
-$file = '';  // Provide path to the log file. If it is not already there this script will create one. 
-
+$file = '/home/pi/scripts/rsstorrentlog.txt';
+$pushbullet_script = '';
 $trans = new Transmission($server, $port, $rpcPath, $user, $password);
 $torrents = $trans->getRssItems($rss);
 foreach ($torrents as $torrent) {
-    $exists = 0; // Flag to check if torrnet file title already present in log file. 
+    $exists = 0;
     $search = $torrent['title'];
-    $lines = file($file);    
-    foreach($lines as $line){       // reading each line of the log file
-      if(strpos($line, $search) !== false){     
-      $exists = 1;                  // Found the match hence setting the flag to 1
+    $lines = file($file);
+    foreach($lines as $line){
+      if(strpos($line, $search) !== false){
+      $exists = 1;
       printf("%s: Torrent Already Downloaded / or in queue: %s\n", date('Y-m-d H:i:s'), $torrent['title']);
       }
     }
-    if($exists == 0){               // if flag is set to 0 go ahead and add the torrent to transmission queue.
+    if($exists == 0){
       $response = json_decode($trans->add($torrent['link']));
       if ($response->result == 'success') {
           printf("%s: success add torrent: %s\n", date('Y-m-d H:i:s'), $torrent['title']);
           $message = $torrent['title'].PHP_EOL;
           file_put_contents($file, $message, FILE_APPEND | LOCK_EX);
+          $mystring = system("python $pushbullet_script $message");
+          echo $mystring;
       }
     }
 }
+
