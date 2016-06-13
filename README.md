@@ -6,6 +6,7 @@
 ## Added following functionalites to  fengqi's repo -
 * Script creates a log file and all newly added torrents' titles are recorded in log file. 
 * Before adding a new torrent to transmission queue, script checks log file to verify it is not present already present in log file. Hence no torrent downloads twice. 
+* PushBullet Notification.
 
 ## For using PushBullet functionality
 * Install PushBullet from https://github.com/randomchars/pushbullet.py by 
