@@ -1,8 +1,17 @@
-# 目前支持的有 CHD/CMCT/TTG/OPENCD, 其它 PT 我没有账号无法确定适配, 因为 XML 格式可能不一样.
-## 使用方法:
-* 修改源码中的 rss, server, port, rpcPath, user, password
-* 测试没问题后, 放到定时任务运行 `*/10 * * * * php rss.php`
+# Transmission-RSS - add support of RSS to Transmission with Pushbullet notification
+## Description
+* Edit script according to your environment and requirement -  rss, server, port, rpcPath, user, password , Logfilepath , pushbulletnotifcation file path.
+* Tested on my Raspberry Pi -  Create a regular cron job to execute it -  `*/10 * * * * php rss.php`
 
-## todo:
-* 记录日志
-* 完善 Transmission class, 可单独抽出成 Transmission Webui 使用.
+## Added following functionalites to  fengqi's repo -
+* Script creates a log file and all newly added torrents' titles are recorded in log file. 
+* Before adding a new torrent to transmission queue, script checks log file to verify it is not present already present in log file. Hence no torrent downloads twice. 
+* PushBullet Notification.
+
+## For using PushBullet functionality
+* Install PushBullet from https://github.com/randomchars/pushbullet.py by 
+::
+
+    pip install pushbullet.py
+* Get PushBullet API from Settings -> Account and put it in pb_notify_torrent_add.py
+* Porvide path of pb_notify_torrent_add.py in rss.php
