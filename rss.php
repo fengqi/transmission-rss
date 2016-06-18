@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 /**
  * Transmission simple RPC/0.1
