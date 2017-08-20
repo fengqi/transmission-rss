@@ -73,7 +73,7 @@ class Transmission
         $content = curl_exec($ch);
         curl_close($ch);
         preg_match("/<code>(X-Transmission-Session-Id: .*)<\/code>/", $content, $content);
-        $this->session_id = $content[1];
+        $this->session_id = isset($content[1]) ? $content[1] : null;
 
         return $this->session_id;
     }
@@ -146,9 +146,14 @@ class Transmission
                         $item->getElementsByTagName('enclosure')->item(0)->getAttribute('url') :
                         $item->getElementsByTagName('link')->item(0)->nodeValue;
 
+                $guid = $item->getElementsByTagName('guid')->item(0) != null ?
+                    $item->getElementsByTagName('guid')->item(0)->nodeValue:
+                    md5($link);
+
                 $items[] = array(
                     'title' => $item->getElementsByTagName('title')->item(0)->nodeValue,
                     'link' => $link,
+                    'guid' => $guid
                 );
             }
         }
@@ -174,12 +179,22 @@ $rpcPath = '/transmission/rpc';
 $user = '';
 $password = '';
 
+$stash = '/tmp/fengqi-transmission-rss';
+!file_exists($stash) && mkdir($stash, 0777, true);
+
 $trans = new Transmission($server, $port, $rpcPath, $user, $password);
 $torrents = $trans->getRssItems($rss);
 foreach ($torrents as $torrent) {
+    $lock_file = $stash.'/'.$torrent['guid'];
+    if (!file_exists($lock_file)) {
+        printf("%s: skip add: %s\n", date('Y-m-d H:i:s'), $torrent['title']);
+        continue;
+    }
+
     $response = json_decode($trans->add($torrent['link']));
     if ($response->result == 'success') {
-        printf("%s: success add torrent: %s\n", date('Y-m-d H:i:s'), $torrent['title']);
+        file_put_contents($lock_file, '1');
+        printf("%s: success add: %s\n", date('Y-m-d H:i:s'), $torrent['title']);
     }
 }
 
