@@ -186,7 +186,7 @@ $trans = new Transmission($server, $port, $rpcPath, $user, $password);
 $torrents = $trans->getRssItems($rss);
 foreach ($torrents as $torrent) {
     $lock_file = $stash.'/'.$torrent['guid'];
-    if (!file_exists($lock_file)) {
+    if (file_exists($lock_file)) {
         printf("%s: skip add: %s\n", date('Y-m-d H:i:s'), $torrent['title']);
         continue;
     }
